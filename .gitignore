@@ -33,13 +33,31 @@ ENV/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# Chroma DB
+data/chroma/
+
+# PDFs and Documents
+data/pdfs/
+*.pdf
+*.docx
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Node
 node_modules/
 /frontend/build
 
 # Vector store
-data/vector_store/
-
-# Logs
-*.log 
+data/vector_store/ 
