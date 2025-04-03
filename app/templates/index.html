@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angel One Support Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message {
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #e2e8f0;
+            border-radius: 15px 15px 0 15px;
+        }
+        .bot-message {
+            background-color: #4299e1;
+            color: white;
+            border-radius: 15px 15px 15px 0;
+        }
+        .error-message {
+            background-color: #feb2b2;
+            color: #742a2a;
+            border-radius: 15px 15px 15px 0;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-center mb-6">Angel One Support Chatbot</h1>
+            
+            <div class="chat-container overflow-y-auto mb-4" id="chatContainer">
+                <div class="space-y-4" id="messageContainer">
+                    <div class="message bot-message p-3 ml-0">
+                        Initializing chatbot...
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-4">
+                <input type="text" id="userInput" 
+                       class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                       placeholder="Type your message here..."
+                       disabled>
+                <button onclick="sendMessage()" 
+                        class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        id="sendButton"
+                        disabled>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userInput = document.getElementById('userInput');
+        const messageContainer = document.getElementById('messageContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const sendButton = document.getElementById('sendButton');
+        let isInitialized = false;
+
+        // Initialize chatbot when page loads
+        window.onload = async function() {
+            try {
+                const response = await fetch('/api/initialize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    isInitialized = true;
+                    userInput.disabled = false;
+                    sendButton.disabled = false;
+                    addMessage("Hello! I'm your Angel One support assistant. How can I help you today?", 'bot');
+                } else {
+                    const error = await response.json();
+                    addMessage(`Error initializing chatbot: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                addMessage('Error connecting to the server. Please try refreshing the page.', 'error');
+            }
+        };
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !userInput.disabled) {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            if (!isInitialized) {
+                addMessage('Chatbot is not initialized yet. Please wait...', 'error');
+                return;
+            }
+
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            userInput.value = '';
+
+            // Show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message bot-message p-3 ml-0';
+            loadingDiv.innerHTML = '<div class="loading"></div>';
+            messageContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                // Remove loading indicator
+                messageContainer.removeChild(loadingDiv);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.response, 'bot');
+                } else {
+                    const error = await response.json();
+                    addMessage(`Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                // Remove loading indicator
+                messageContainer.removeChild(loadingDiv);
+                addMessage('Sorry, there was an error processing your request.', 'error');
+            }
+        }
+
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message p-3 ${type === 'user' ? 'ml-auto' : 'ml-0'}`;
+            messageDiv.textContent = text;
+            messageContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html> 
